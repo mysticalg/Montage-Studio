@@ -12,7 +12,7 @@ shutil.copytree(app,stage/app.name,dirs_exist_ok=True,symlinks=True)
 extension=stage/'x-extension';extension.mkdir(exist_ok=True)
 for name in ('manifest.json','background.js','content.js','popup.html','popup.css','popup.js','README.md'):
     shutil.copy2(root/'x-extension'/name,extension/name)
-for name in ('README.md','LICENSE','THIRD_PARTY_NOTICES.txt'):shutil.copy2(root/name,stage/name)
+for name in ('README.md','LICENSE','LICENSE-Python.txt','THIRD_PARTY_NOTICES.txt'):shutil.copy2(root/name,stage/name)
 notices=stage/'runtime-licenses';notices.mkdir(exist_ok=True)
 for distribution in importlib.metadata.distributions():
     name=distribution.metadata.get('Name','dependency')
