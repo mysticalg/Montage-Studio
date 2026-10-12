@@ -1,5 +1,6 @@
 """Package a clean native build with extension, docs and checksums, never local data."""
 import hashlib, json, os, platform, shutil, subprocess, sys, tarfile, zipfile
+import importlib.metadata
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1];out=root/'release';out.mkdir(exist_ok=True)
@@ -12,6 +13,16 @@ extension=stage/'x-extension';extension.mkdir(exist_ok=True)
 for name in ('manifest.json','background.js','content.js','popup.html','popup.css','popup.js','README.md'):
     shutil.copy2(root/'x-extension'/name,extension/name)
 for name in ('README.md','LICENSE','THIRD_PARTY_NOTICES.txt'):shutil.copy2(root/name,stage/name)
+notices=stage/'runtime-licenses';notices.mkdir(exist_ok=True)
+for distribution in importlib.metadata.distributions():
+    name=distribution.metadata.get('Name','dependency')
+    for file in distribution.files or []:
+        if 'license' in str(file).lower() or 'copying' in str(file).lower():
+            source=Path(distribution.locate_file(file))
+            if source.is_file() and source.stat().st_size<2_000_000:
+                target=notices/name/str(file).replace('..','_')
+                target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target)
+    (notices/(name+'.txt')).write_text('Name: '+name+'\nVersion: '+distribution.version+'\nLicense: '+str(distribution.metadata.get('License','See included dependency license files'))+'\n',encoding='utf-8')
 if system=='linux':
     launcher=stage/'Launch Montage Studio.sh'
     launcher.write_text('#!/bin/sh\ncd "$(dirname "$0")"\nexec "./Montage Studio/Montage Studio" "$@"\n');launcher.chmod(0o755)

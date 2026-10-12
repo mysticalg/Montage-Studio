@@ -5,7 +5,7 @@ import platform_support as p
 
 class PlatformTests(unittest.TestCase):
  def test_data_and_renderer(self):
-  with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{},clear=True):
+  with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{},clear=True),patch.object(p.Path,'home',return_value=Path('home').resolve()):
    home=Path(tmp)
    for system,engine in [('win32','edgechromium'),('darwin','cocoa'),('linux','qt')]:
     with patch.object(p.sys,'platform',system):
@@ -16,9 +16,9 @@ class PlatformTests(unittest.TestCase):
  def test_folder_reveal(self):
   with patch.object(p.subprocess,'Popen') as spawn:
    with patch.object(p.sys,'platform','darwin'):
-    p.open_folder(Path('/tmp/video.mp4'),True);spawn.assert_called_with(['open','-R','/tmp/video.mp4'])
+    p.open_folder(Path('/tmp/video.mp4'),True);spawn.assert_called_with(['open','-R',str(Path('/tmp/video.mp4'))])
    with patch.object(p.sys,'platform','linux'):
-    p.open_folder(Path('/tmp/video.mp4'),True);spawn.assert_called_with(['xdg-open','/tmp'])
+    p.open_folder(Path('/tmp/video.mp4'),True);spawn.assert_called_with(['xdg-open',str(Path('/tmp'))])
  def test_ai_executable_platform(self):
   for system,name in [('win32','realesrgan-ncnn-vulkan.exe'),('darwin','realesrgan-ncnn-vulkan'),('linux','realesrgan-ncnn-vulkan')]:
    with patch.object(p.sys,'platform',system):self.assertEqual(p.ai_executable(Path('tools')).name,name)

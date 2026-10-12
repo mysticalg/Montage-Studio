@@ -91,7 +91,10 @@ class StudioTests(unittest.TestCase):
   if not s.shutil.which('ffmpeg'):self.skipTest('FFmpeg required')
   landscape=self.pool/'landscape.mp4';rotated=self.pool/'rotated.mp4'
   s.run(['ffmpeg','-y','-v','error','-f','lavfi','-i','color=c=green:s=160x90:r=30:d=0.2','-c:v','libx264',str(landscape)])
-  s.run(['ffmpeg','-y','-v','error','-i',str(landscape),'-c','copy','-metadata:s:v:0','rotate=90',str(rotated)])
+  help_text=s.run(['ffmpeg','-hide_banner','-h','full'])
+  rotation=['-display_rotation','90'] if b'-display_rotation' in help_text else []
+  metadata=[] if rotation else ['-metadata:s:v:0','rotate=90']
+  s.run(['ffmpeg','-y','-v','error',*rotation,'-i',str(landscape),'-c','copy',*metadata,str(rotated)])
   self.assertAlmostEqual(s.clip_display_ratio(landscape),16/9)
   self.assertAlmostEqual(s.clip_display_ratio(rotated),9/16)
   clips,total=s.scan([str(self.pool)],match_format='portrait');self.assertEqual(total,1);self.assertEqual(clips[0]['path'],str(rotated.resolve()))
