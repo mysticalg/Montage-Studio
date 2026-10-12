@@ -30,10 +30,7 @@ if system=='linux':
 if system=='windows':(stage/'Launch Montage Studio.cmd').write_text('@echo off\r\nstart "" "%~dp0Montage Studio\\Montage Studio.exe"\r\n')
 if any(p.name in ('studio.sqlite3','credentials.dpapi','extension-pair.json') or p.name=='data' for p in stage.rglob('*')):raise RuntimeError('Private data in release')
 if system=='macos':
-    dmg=out/f'{stage.name}.dmg'
-    # Both an ordinary archive and a mountable image; copying to Applications is optional.
-    os.symlink('/Applications',stage/'Applications',target_is_directory=True)
-    subprocess.run(['hdiutil','create','-volname','Montage Studio','-srcfolder',str(stage),'-ov','-format','UDZO',str(dmg)],check=True)
+    # ditto preserves app-bundle permissions and symlinks without disk-image mounting.
     archive=out/f'{stage.name}.zip'
     subprocess.run(['ditto','-c','-k','--sequesterRsrc','--keepParent',str(stage),str(archive)],check=True)
 elif system=='windows':

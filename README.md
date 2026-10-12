@@ -26,12 +26,12 @@ Download a native package from [Releases](https://github.com/mysticalg/Montage-S
 | Platform | Package | Requirements |
 | --- | --- | --- |
 | Windows | x64 portable ZIP | Windows 10/11, FFmpeg, Microsoft Edge WebView2 Runtime |
-| macOS | Apple Silicon or Intel DMG / ZIP | macOS 13+; matching architecture; FFmpeg |
+| macOS | Apple Silicon or Intel app ZIP | macOS 13+; matching architecture; FFmpeg |
 | Linux | x64 tar.gz | Ubuntu 22.04+ or compatible desktop distribution; FFmpeg and Qt system libraries |
 
 Windows: extract the ZIP and run **Launch Montage Studio.cmd**, or `Montage Studio/Montage Studio.exe`. Install FFmpeg with `winget install Gyan.FFmpeg`; restart the app after installation. WebView2 is normally present on Windows 11; install [Microsoft's Evergreen Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) if missing.
 
-macOS: open the DMG and drag **Montage Studio.app** into Applications, or extract the ZIP. Install FFmpeg with `brew install ffmpeg`. Builds are unsigned and not notarized: macOS may require the explicit **Open Anyway** control in Privacy & Security for this downloaded app. Do not disable Gatekeeper globally. The upstream AI helper may need Rosetta on Apple Silicon; AI remains optional.
+macOS: extract the ZIP and drag **Montage Studio.app** into Applications. Install FFmpeg with `brew install ffmpeg`. Builds are unsigned and not notarized: macOS may require the explicit **Open Anyway** control in Privacy & Security for this downloaded app. Do not disable Gatekeeper globally. AI remains optional and requires compatible GPU support.
 
 Linux: extract the tar.gz and run `./Launch Montage Studio.sh`. On Ubuntu/Debian, `sh install-linux-dependencies.sh` installs FFmpeg, native file chooser and required system libraries. Other distributions need their equivalent packages. A graphical session is required; GPU AI also requires a working Vulkan driver. Linux targets x86_64 and glibc 2.35+.
 
