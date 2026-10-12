@@ -114,11 +114,12 @@ def main():
                 deadline = time.monotonic() + 20
                 result = {'passed': False}
                 while time.monotonic() < deadline:
-                    result = window.evaluate_js("({title:document.title, heading:document.querySelector('h1')?.textContent, inputs:document.querySelectorAll('input').length})")
+                    result = window.evaluate_js("({title:document.title, heading:document.querySelector('h1')?.textContent, inputs:document.querySelectorAll('input').length, body:document.body.innerText.slice(0,500), url:location.href})")
                     if result.get('heading') == 'Create montage':
                         result['passed'] = True
                         break
                     time.sleep(.2)
+                result.setdefault('passed',False)
                 args.diagnostics.parent.mkdir(parents=True, exist_ok=True)
                 args.diagnostics.write_text(json.dumps(result, indent=2), encoding='utf-8')
                 window.destroy()

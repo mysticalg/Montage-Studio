@@ -804,7 +804,7 @@ class Handler(BaseHTTPRequestHandler):
                 except (ValueError,OSError,subprocess.TimeoutExpired):return self.send({'error':'Thumbnail unavailable'},404)
             else:
                 name=u.path.lstrip('/') or 'index.html'; p=(ROOT/'frontend'/'dist'/name).resolve()
-                if not p.is_relative_to(ROOT/'frontend'/'dist'): return self.send({'error':'Invalid path'},403)
+                if not p.is_relative_to((ROOT/'frontend'/'dist').resolve()): return self.send({'error':'Invalid path'},403)
                 if not p.is_file(): p=ROOT/'frontend'/'dist'/'index.html'
             if not p.is_file(): return self.send({'error':'Frontend missing. Run npm install and npm run build in frontend.'},404)
             size=p.stat().st_size; start=0; end=size-1; code=200
