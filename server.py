@@ -923,7 +923,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e: self.send({'error':str(e)},400)
 
 class StudioHTTPServer(ThreadingHTTPServer):
-    allow_reuse_address=False
+    allow_reuse_address=os.name!='nt'
     def server_bind(self):
         if os.name=='nt' and hasattr(socket,'SO_EXCLUSIVEADDRUSE'):
             self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)

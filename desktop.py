@@ -56,7 +56,8 @@ def ensure_backend(base, home, data, timeout=30):
         if read_state(base) is not None:
             return True
         if process.poll() is not None:
-            raise RuntimeError('The local service could not start. See data/service.log for details.')
+            details=(data/'service.log').read_text(encoding='utf-8',errors='replace')[-1800:]
+            raise RuntimeError('The local service could not start. See data/service.log for details.\n'+details)
         time.sleep(.2)
     # Leave a possibly busy service alone, rather than interrupting work.
     raise RuntimeError('The service is taking too long to start. See data/service.log, then try opening the app again.')

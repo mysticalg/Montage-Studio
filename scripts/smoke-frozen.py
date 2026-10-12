@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory() as folder:
   diagnostics=temp/'desktop-smoke.json'
   gui=subprocess.Popen([str(exe),'--diagnostics',str(diagnostics)],env=env,stdout=log,stderr=log)
   gui.wait(timeout=90)
-  assert gui.returncode==0 and json.loads(diagnostics.read_text())['passed'],(temp/'service.log').read_text(errors='replace')
+  assert gui.returncode==0 and json.loads(diagnostics.read_text())['passed'],(temp/'service.log').read_text(errors='replace')+'\n'+(temp/'data'/'service.log').read_text(errors='replace')+'\n'+(diagnostics.read_text() if diagnostics.exists() else 'No desktop diagnostics')
   state=get();post('shutdown',{})
   print(json.dumps({'platform':sys.platform,'render':'passed','desktop':'passed','size':[1280,720],'duration':info['format']['duration'],'originals':'preserved'}))
  finally:

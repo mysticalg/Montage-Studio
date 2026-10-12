@@ -38,7 +38,7 @@ jobs:
         run: brew install ffmpeg
       - name: Linux desktop dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg xvfb zenity libegl1 libopengl0 libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0 libnss3 libasound2 libvulkan1
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg xvfb zenity libegl1 libopengl0 libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-icccm4 libxkbcommon-x11-0 libnss3 libasound2 libvulkan1
       - name: Python dependencies
         run: python -m pip install -r requirements.txt -r desktop-requirements.txt
       - name: Frontend
