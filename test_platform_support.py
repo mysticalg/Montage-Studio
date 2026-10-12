@@ -6,7 +6,7 @@ import platform_support as p
 class PlatformTests(unittest.TestCase):
  def test_data_and_renderer(self):
   with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,{},clear=True),patch.object(p.Path,'home',return_value=Path('home').resolve()):
-   home=Path(tmp)
+   home=Path(tmp).resolve()
    for system,engine in [('win32','edgechromium'),('darwin','cocoa'),('linux','qt')]:
     with patch.object(p.sys,'platform',system):
      self.assertEqual(p.renderer(),engine);self.assertNotEqual(p.data_dir(home),home/'data')

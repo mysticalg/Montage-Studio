@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 TEMP=tempfile.TemporaryDirectory(); os.environ['MONTAGE_DATA']=TEMP.name
+TEMP.name=str(Path(TEMP.name).resolve())
 spec=importlib.util.spec_from_file_location('studio',Path(__file__).with_name('server.py')); s=importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
 
 class StudioTests(unittest.TestCase):
@@ -666,7 +667,9 @@ class StudioTests(unittest.TestCase):
   self.assertEqual(len(ready['payload']['clips']),3);self.assertAlmostEqual(ready['payload']['duration'],6,delta=1/30+.002)
   for cut in cuts:
    frame=round(cut*30)
-   pixels=s.run(['ffmpeg','-v','error','-i',ready['payload']['file'],'-vf',f'select=eq(n\\,{frame-1})+eq(n\\,{frame}),scale=1:1','-vsync','0','-pix_fmt','rgb24','-f','rawvideo','-'])
+   help_text=s.run(['ffmpeg','-hide_banner','-h','full'])
+   sync=['-fps_mode','passthrough'] if b'-fps_mode' in help_text else ['-vsync','0']
+   pixels=s.run(['ffmpeg','-v','error','-i',ready['payload']['file'],'-vf',f'select=eq(n\\,{frame-1})+eq(n\\,{frame}),scale=1:1',*sync,'-pix_fmt','rgb24','-f','rawvideo','-'])
    self.assertEqual(len(pixels),6);self.assertNotEqual(pixels[:3],pixels[3:])
   self.assertTrue(all(s.hash_file(Path(path))==h for path,h in original.items()))
 

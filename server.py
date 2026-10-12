@@ -144,8 +144,7 @@ def display_ratio(stream):
 
 def clip_display_ratio(path):
     try:
-        result=subprocess.run(['ffprobe','-v','error','-select_streams','v:0','-show_entries',
-            'stream=width,height,sample_aspect_ratio:stream_tags=rotate:stream_side_data=rotation',
+        result=subprocess.run(['ffprobe','-v','error','-select_streams','v:0','-show_streams',
             '-of','json',str(path)],capture_output=True,timeout=15,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         if result.returncode:return None
         return display_ratio(json.loads(result.stdout)['streams'][0])

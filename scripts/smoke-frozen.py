@@ -1,5 +1,5 @@
 """Exercise packaged server, neutral FFmpeg render and clean data on the native runner."""
-import hashlib,json,os,subprocess,sys,tempfile,time,urllib.request
+import hashlib,json,os,subprocess,sys,tempfile,time,urllib.request,urllib.error
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 exe=root/'dist'/'Montage Studio.app'/'Contents'/'MacOS'/'Montage Studio' if sys.platform=='darwin' else root/'dist'/'Montage Studio'/('Montage Studio.exe' if sys.platform=='win32' else 'Montage Studio')
@@ -15,7 +15,9 @@ with tempfile.TemporaryDirectory() as folder:
   with urllib.request.urlopen(base+'/api/state',timeout=3) as r:return json.load(r)
  def post(path,payload):
   request=urllib.request.Request(base+'/api/'+path,json.dumps(payload).encode(),{'Content-Type':'application/json','X-Studio-Token':state['csrf']})
-  with urllib.request.urlopen(request,timeout=30) as r:return json.load(r)
+  try:
+   with urllib.request.urlopen(request,timeout=30) as r:return json.load(r)
+  except urllib.error.HTTPError as e:raise RuntimeError(e.read().decode()) from e
  try:
   for _ in range(100):
    try:state=get();break
@@ -24,7 +26,7 @@ with tempfile.TemporaryDirectory() as folder:
     time.sleep(.2)
   else:raise RuntimeError('Frozen server did not start')
   assert state['jobs']==[] and state['settings']['expectedAccount']=='' and state['settings']['folders']==['']
-  built=post('build',{'folders':[str(pool)],'music':str(track),'clips':2,'batch':1,'format':'landscape','resolution':'720','matchAudioLength':True,'crossfade':True,'fadeDuration':.1,'pingPong':True,'smoothPingPong':True,'pingPongEase':.15,'clipDuration':.6})
+  built=post('build',{'folders':[str(pool)],'music':str(track),'clips':2,'batch':1,'format':'landscape','resolution':'720','matchAudioLength':True,'crossfade':True,'fadeDuration':.1,'pingPong':True,'smoothPingPong':True,'pingPongEase':.15,'clipDuration':.8})
   for _ in range(300):
    job=get()['jobs'][0]
    if job['status']=='error':raise RuntimeError(job['error'])
