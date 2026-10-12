@@ -1,0 +1,56 @@
+name: Publish verified native packages
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Successful native build run ID
+        required: true
+      tag:
+        description: Release version tag
+        required: true
+        default: v1.0.0
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm build success and source revision
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.build_run }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(gh run view "$RUN_ID" --json conclusion --jq .conclusion)" = success
+          echo "sha=$(gh run view "$RUN_ID" --json headSha --jq .headSha)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          path: release
+          merge-multiple: true
+      - name: Verify archive checksums and required platforms
+        working-directory: release
+        run: |
+          sha256sum --check *.sha256
+          test -f Montage-Studio-windows-x64.zip
+          test -f Montage-Studio-macos-arm64.zip
+          test -f Montage-Studio-macos-x64.zip
+          test -f Montage-Studio-linux-x64.tar.gz
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ steps.verified.outputs.sha }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --target "$SHA" --title "Montage Studio $TAG" --notes-file RELEASE_NOTES.md
+          fi
+          gh release upload "$TAG" release/* --clobber
+          gh release edit "$TAG" --draft=false --latest
