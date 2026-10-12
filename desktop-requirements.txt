@@ -1,0 +1,4 @@
+pywebview==6.2.1
+pywebview[pyside6]==6.2.1; sys_platform == 'linux'
+pyinstaller>=6.18,<7
+keyring>=25,<26; sys_platform != 'win32'

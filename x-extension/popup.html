@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Montage Studio X Publisher</title><link rel="stylesheet" href="popup.css"></head><body>
+<h1>Montage Studio</h1><p>Use your signed-in X browser. Keep Montage Studio running.</p>
+<label for="token">Pairing code from app Settings</label><input id="token" type="password" autocomplete="off">
+<button id="pair">Pair with local app</button><button id="verify">Verify X account</button>
+<label class="check"><input id="enabled" type="checkbox"> Process queued posts and schedules</label>
+<button id="run">Check queue now</button><button id="stop">Stop queue processing</button>
+<pre id="status" role="status">Opening…</pre>
+<p class="small">Only jobs you queue in Montage Studio are processed. Posting clicks the final Post button. Scheduling saves in X. Login, rate and security warnings stop processing. No cookies or passwords are read.</p>
+<script src="popup.js"></script></body></html>

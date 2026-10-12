@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"test":"node --test test-extension.mjs test-background.mjs"},"devDependencies":{"jsdom":"^26.1.0"}}
