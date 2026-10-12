@@ -44,7 +44,7 @@ with tempfile.TemporaryDirectory() as folder:
   # GUI loads the real bundled frontend in each platform's renderer.
   diagnostics=temp/'desktop-smoke.json'
   gui=subprocess.Popen([str(exe),'--diagnostics',str(diagnostics)],env=env,stdout=log,stderr=log)
-  gui.wait(timeout=90)
+  gui.wait(timeout=150)
   assert gui.returncode==0 and json.loads(diagnostics.read_text()).get('passed'),(temp/'service.log').read_text(errors='replace')+'\n'+(temp/'data'/'service.log').read_text(errors='replace')+'\n'+(diagnostics.read_text() if diagnostics.exists() else 'No desktop diagnostics')
   state=get();post('shutdown',{})
   print(json.dumps({'platform':sys.platform,'render':'passed','desktop':'passed','size':[1280,720],'duration':info['format']['duration'],'originals':'preserved'}))

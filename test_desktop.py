@@ -11,6 +11,14 @@ spec.loader.exec_module(d)
 
 
 class DesktopTests(unittest.TestCase):
+    def test_frozen_service_gets_independent_bootloader_environment(self):
+        with tempfile.TemporaryDirectory() as folder:
+            data=Path(folder)
+            with patch.object(d.sys,'frozen',True,create=True),patch.object(d,'read_state',side_effect=[None,{'jobs':[]}]),patch.object(d.subprocess,'Popen') as spawn:
+                d.ensure_backend('http://127.0.0.1:8765',data,data)
+                self.assertEqual(spawn.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
+                self.assertEqual(spawn.call_args.args[0],[d.sys.executable,'--server'])
+
     def test_frozen_app_reuses_adjacent_existing_data_home(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)

@@ -37,7 +37,7 @@ def read_state(base):
     return value
 
 
-def ensure_backend(base, home, data, timeout=30):
+def ensure_backend(base, home, data, timeout=90):
     state = read_state(base)
     if state is not None:
         if state.get('dataPath') and Path(state['dataPath']).resolve() != data.resolve():
@@ -46,6 +46,9 @@ def ensure_backend(base, home, data, timeout=30):
     command = [sys.executable, '--server'] if getattr(sys, 'frozen', False) else [sys.executable, str(home / 'server.py')]
     environment = os.environ.copy()
     environment['MONTAGE_DATA'] = str(data)
+    if getattr(sys,'frozen',False):
+        # The service outlives the window; launch an independent frozen instance.
+        environment['PYINSTALLER_RESET_ENVIRONMENT']='1'
     # Do not inherit a test's data path or launch from a temporary bundle directory.
     with (data / 'service.log').open('ab') as log:
         process = subprocess.Popen(command, cwd=home, env=environment, stdin=subprocess.DEVNULL,
