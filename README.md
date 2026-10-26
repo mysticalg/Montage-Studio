@@ -13,7 +13,8 @@ Turn a folder of clips and a music track into a finished montage, locally on you
 - Aligns edits with detected beats, or accepts a manual BPM.
 - Adds crossfades, optical-flow frame interpolation, fixed-length random excerpts and ping-pong loops with eased reversals.
 - Optionally inserts evenly spaced stills with configurable duration and smooth zoom.
-- Exports 16:9, 9:16 or square video at 720p, 1080p, 1440p or 2160p; optionally selects only clips matching the output ratio.
+- Exports 16:9, 9:16, 2:3 or square video at 720p, 1080p, 1440p or 2160p; optionally selects only clips matching the output ratio.
+- Offers Fit whole clip (allow borders) or Fill frame (crop edges, no borders) under Clip framing. Fill preserves proportions and crops from the centre; borders baked into source footage may remain.
 - Upscales small clips with local Real-ESRGAN before looping and interpolation. GPU/Vulkan support is required; speed and quality depend on the GPU, source and model.
 - Generates optional captions and hashtags through a local Ollama model.
 - Saves MP4s automatically. Library thumbnails, Download MP4 and Show in folder make exports easy to retrieve.

@@ -7,6 +7,27 @@ TEMP.name=str(Path(TEMP.name).resolve())
 spec=importlib.util.spec_from_file_location('studio',Path(__file__).with_name('server.py')); s=importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
 
 class StudioTests(unittest.TestCase):
+ def test_clip_framing_validation_and_saved_plan(self):
+  with self.assertRaisesRegex(ValueError,'Fill frame'):
+   s.reserve({'clipFit':'invalid'})
+  (self.pool/'clip.mp4').write_bytes(b'clip')
+  ids,_=s.reserve(dict(folders=[str(self.pool)],music=str(self.music),clips=1,batch=1,format='portrait23',clipFit='fill'))
+  payload=s.get_job(ids[0])['payload']
+  self.assertEqual(payload['clipFit'],'fill')
+  self.assertEqual(payload['format'],'portrait23')
+
+ def test_real_fill_has_no_added_borders(self):
+  if not s.shutil.which('ffmpeg'):self.skipTest('FFmpeg required')
+  for shape in ('160x90','90x160','80x120'):
+   for mode in ('fit','fill'):
+    pixels=s.run(['ffmpeg','-v','error','-f','lavfi','-i',f'color=c=red:s={shape}',
+     '-vf',s.video_fit_filter(80,120,'portrait23',mode),'-frames:v','1','-pix_fmt','rgb24','-f','rawvideo','-'])
+    self.assertEqual(len(pixels),80*120*3)
+    if mode=='fill':
+     for index in (0,79*3,80*119*3,(80*120-1)*3):
+      self.assertGreater(pixels[index],200)
+      self.assertLess(pixels[index+1],20)
+
  def test_ai_output_validation_precedes_reservation_and_persists_plan(self):
   for options in ({'resolution':'999'},{'aiUpscaleModel':'invalid'}):
    with self.assertRaises(ValueError):s.reserve(options)

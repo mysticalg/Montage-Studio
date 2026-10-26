@@ -12,6 +12,13 @@ class UpscalerTests(unittest.TestCase):
   for fmt,res in [('bad','auto'),('landscape','999')]:
    with self.assertRaises(ValueError):ai.output_size(fmt,res)
 
+ def test_portrait_23_dimensions(self):
+  for resolution in ('auto','720','1080','1440','2160'):
+   w,h=ai.output_size('portrait23',resolution)
+   self.assertEqual(w*3,h*2)
+   self.assertEqual((w%2,h%2),(0,0))
+  self.assertEqual(ai.output_size('portrait23'),(720,1080))
+
  def test_display_dimensions_and_scale_selection(self):
   self.assertEqual(ai.source_size({'width':1920,'height':1080,'side_data_list':[{'rotation':90}]}),(1080,1920))
   self.assertEqual(ai.source_size({'width':720,'height':576,'sample_aspect_ratio':'64:45'}),(1024,576))

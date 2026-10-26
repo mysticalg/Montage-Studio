@@ -14,9 +14,10 @@ def available(model='fast'):
     return (ai_executable(TOOLS)).is_file() and all((TOOLS/'models'/f'{name}.{ext}').is_file() for name in names for ext in ('bin','param'))
 
 def output_size(format_name,resolution='auto'):
-    if format_name not in ('landscape','portrait','square'):raise ValueError('Invalid output format')
+    if format_name not in ('landscape','portrait','portrait23','square'):raise ValueError('Invalid output format')
     if str(resolution) not in ('auto','720','1080','1440','2160'):raise ValueError('Choose automatic, 720p, 1080p, 1440p or 2160p output')
     short=(1080 if format_name=='square' else 720) if str(resolution)=='auto' else int(resolution)
+    if format_name=='portrait23':return short,short*3//2
     long=round(short*16/9)
     return (short,long) if format_name=='portrait' else (short,short) if format_name=='square' else (long,short)
 
@@ -70,9 +71,12 @@ def _frame(stream,size):
         chunks.append(chunk);count+=len(chunk)
     return b''.join(chunks)
 
-def upscale(source,tmp,target,stream,seek=0,seconds=None,model='fast',progress=lambda message:None,stop=None):
+def upscale(source,tmp,target,stream,seek=0,seconds=None,model='fast',progress=lambda message:None,stop=None,clip_fit='fit'):
     """Process bounded 32-frame batches; preserve 30 fps and every decoded frame."""
     size=source_size(stream);scale=upscale_scale(size,target,model)
+    if clip_fit=='fill':
+        required=max(target[0]/size[0],target[1]/size[1])
+        scale=0 if required<=1.02 else 4 if model=='general' or required>2 else 2
     if not scale:return None,{'applied':False,'reason':'Source already meets output size'}
     if not available(model):raise ValueError('AI upscaler is missing. Use the complete Montage Studio desktop package.')
     tmp.mkdir(parents=True,exist_ok=True);final=tmp/'complete.mp4';manifest=tmp/'complete.json'
@@ -113,7 +117,8 @@ def upscale(source,tmp,target,stream,seek=0,seconds=None,model='fast',progress=l
                         with header:dimensions=struct.unpack('>II',header.read(24)[16:24])
                         if dimensions!=(size[0]*scale,size[1]*scale):raise RuntimeError('AI upscaler returned incorrect frame dimensions')
                     staged=chunk.with_suffix('.partial.mp4');w,h=target
-                    checked_process(['ffmpeg','-y','-v','error','-framerate','30','-i',str(enhanced/'frame%08d.png'),'-frames:v',str(block_count),'-an','-vf',f'scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-threads','4',str(staged)],tmp/'encode.log',stop)
+                    framing=f'scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,crop={w}:{h},setsar=1' if clip_fit=='fill' else f'scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1'
+                    checked_process(['ffmpeg','-y','-v','error','-framerate','30','-i',str(enhanced/'frame%08d.png'),'-frames:v',str(block_count),'-an','-vf',framing,'-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-threads','4',str(staged)],tmp/'encode.log',stop)
                     staged.replace(chunk);count.write_text(json.dumps(block_count))
                     for folder in (incoming,enhanced):
                         for image in folder.glob('frame*.png'):image.unlink()

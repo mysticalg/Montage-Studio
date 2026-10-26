@@ -30,10 +30,11 @@ MAX_CLIPS=5000
 DEFAULTS['matchAudioLength']=False
 DEFAULTS.update(beatSync=False,beatBpm=0.0)
 DEFAULTS['matchFormatOnly']=False
+DEFAULTS['clipFit']='fit'
 DEFAULTS.update(smoothPingPong=False,pingPongEase=0.35)
 DEFAULTS.update(aiUpscale=False,aiUpscaleModel='fast',resolution='auto')
-FORMAT_RATIOS={'landscape':16/9,'portrait':9/16,'square':1.0}
-FORMAT_LABELS={'landscape':'16:9','portrait':'9:16','square':'1:1'}
+FORMAT_RATIOS={'landscape':16/9,'portrait':9/16,'portrait23':2/3,'square':1.0}
+FORMAT_LABELS={'landscape':'16:9','portrait':'9:16','portrait23':'2:3','square':'1:1'}
 
 @contextmanager
 def db():
@@ -151,7 +152,7 @@ def clip_display_ratio(path):
     except (OSError,ValueError,TypeError,KeyError,IndexError,subprocess.TimeoutExpired):return None
 
 def filter_clip_ratios(found,format_name):
-    if format_name not in FORMAT_RATIOS:raise ValueError('Choose landscape (16:9), portrait (9:16), or square (1:1)')
+    if format_name not in FORMAT_RATIOS:raise ValueError('Choose landscape (16:9), portrait (9:16), portrait 2:3, or square (1:1)')
     if not shutil.which('ffprobe'):raise ValueError('Install FFprobe and add it to PATH to match video formats')
     with db() as c:cache={row['hash']:row['ratio'] for row in c.execute('SELECT hash,ratio FROM clip_geometry')}
     eligible={};unreadable=0;measured=[]
@@ -320,7 +321,7 @@ def reserve_audio_montages(options,available,tracks,images,still_count,still_dur
             coverage=sequence_duration(lengths,options)
             if coverage+1e-6>=target and len(chosen)>=count:
                 payload=dict(clips=chosen,music=str(music),format=options.get('format','landscape'),caption='',madeWithAI=True,notes=options.get('notes',''),crossfade=bool(options.get('crossfade')),fadeDuration=float(options.get('fadeDuration',.5)),interpolate=bool(options.get('interpolate')),stills=selected,sequence=sequence,stillDuration=still_duration,zoomAmount=zoom_amount,pingPong=bool(options.get('pingPong')),clipDuration=float(options.get('clipDuration',10)),fixedClipLength=bool(options.get('fixedClipLength')),randomStart=bool(options.get('randomStart',True)),matchAudioLength=True,audioDuration=target,beatSync=bool(options.get('beatSync')),beatBpm=float(options.get('beatBpm',0)),requestedClips=int(options.get('clips',10)))
-                payload.update(aiUpscale=bool(options.get('aiUpscale')),aiUpscaleModel=options.get('aiUpscaleModel','fast'),resolution=options.get('resolution','auto'),matchFormatOnly=bool(options.get('matchFormatOnly')),smoothPingPong=bool(options.get('smoothPingPong')),pingPongEase=float(options.get('pingPongEase',.35)))
+                payload.update(clipFit=options.get('clipFit','fit'),aiUpscale=bool(options.get('aiUpscale')),aiUpscaleModel=options.get('aiUpscaleModel','fast'),resolution=options.get('resolution','auto'),matchFormatOnly=bool(options.get('matchFormatOnly')),smoothPingPong=bool(options.get('smoothPingPong')),pingPongEase=float(options.get('pingPongEase',.35)))
                 try:prepare_timeline(payload,beats)
                 except ValueError as error:
                     timeline_error=error;payload=None
@@ -341,6 +342,7 @@ def reserve_audio_montages(options,available,tracks,images,still_count,still_dur
     return [jid for jid,_ in plans]
 
 def reserve(options):
+    if options.get('clipFit','fit') not in ('fit','fill'):raise ValueError('Choose Fit whole clip or Fill frame')
     ai_upscaler.output_size(options.get('format','landscape'),options.get('resolution','auto'))
     if options.get('aiUpscaleModel','fast') not in ai_upscaler.MODELS:raise ValueError('Choose the fast or general AI model')
     if options.get('aiUpscale') and not ai_upscaler.available(options.get('aiUpscaleModel','fast')):raise ValueError('AI upscaler is missing. Use the complete Montage Studio desktop package.')
@@ -392,7 +394,7 @@ def reserve(options):
                 p=dict(clips=chosen,music=str(random.choice(tracks)),format=options.get('format','landscape'),matchFormatOnly=bool(options.get('matchFormatOnly')),caption='',madeWithAI=True,notes=options.get('notes',''),crossfade=bool(options.get('crossfade',False)),fadeDuration=fade,interpolate=bool(options.get('interpolate',False)))
                 selected=images[(len(ids)-1)*still_count:len(ids)*still_count]
                 selected=[dict(image,kind='still',zoom=random.choice(('in','out')) if zoom=='random' else zoom) for image in selected]
-                p.update(aiUpscale=bool(options.get('aiUpscale')),aiUpscaleModel=options.get('aiUpscaleModel','fast'),resolution=options.get('resolution','auto'),smoothPingPong=bool(options.get('smoothPingPong')),pingPongEase=ease,stills=selected,sequence=disperse(chosen,selected),stillDuration=still_duration,zoomAmount=zoom_amount,pingPong=bool(options.get('pingPong',False)),clipDuration=clip_duration,fixedClipLength=bool(options.get('fixedClipLength',False)),randomStart=bool(options.get('randomStart',True)))
+                p.update(clipFit=options.get('clipFit','fit'),aiUpscale=bool(options.get('aiUpscale')),aiUpscaleModel=options.get('aiUpscaleModel','fast'),resolution=options.get('resolution','auto'),smoothPingPong=bool(options.get('smoothPingPong')),pingPongEase=ease,stills=selected,sequence=disperse(chosen,selected),stillDuration=still_duration,zoomAmount=zoom_amount,pingPong=bool(options.get('pingPong',False)),clipDuration=clip_duration,fixedClipLength=bool(options.get('fixedClipLength',False)),randomStart=bool(options.get('randomStart',True)))
                 if options.get('beatSync'):
                     p.update(beatSync=True,beatBpm=bpm,requestedClips=count)
                     prepare_timeline(p)
@@ -486,8 +488,16 @@ def crossfade_parts(parts,lengths,overlaps,tmp,progress=None):
         parts,lengths,overlaps=next_parts,next_lengths,next_overlaps;level+=1
     return parts[0],lengths[0]
 
+def video_fit_filter(w,h,format_name,clip_fit='fit'):
+    # Work in display pixels so anamorphic and rotated clips keep their proportions.
+    normalize='scale=iw*sar:ih,setsar=1,'
+    if clip_fit=='fill':
+        return normalize+f'scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1'
+    return normalize+f'scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1'
+
+
 def render(job):
-    jid=job['id']; p=job['payload']; tmp=DATA/'cache'/jid; tmp.mkdir(parents=True,exist_ok=True)
+    jid=job['id']; p=job['payload']; tmp=DATA/'cache'/jid/('framing-v2-'+p.get('clipFit','fit')); tmp.mkdir(parents=True,exist_ok=True)
     if not claim(jid,'rendering',('queued',)): return
     update(jid,'rendering',error='',payload={'progress':'Preparing clips'})
     w,h=ai_upscaler.output_size(p['format'],p.get('resolution','auto')); parts=[]
@@ -508,7 +518,7 @@ def render(job):
                 amount=float(p.get('zoomAmount',10))/100
                 mode=clip.get('zoom','in')
                 zoom='1' if mode=='none' else (f'1+{amount}*on/{max(1,frames-1)}' if mode=='in' else f'1+{amount}-{amount}*on/{max(1,frames-1)}')
-                vf=f"scale={w*2}:{h*2}:force_original_aspect_ratio=decrease,pad={w*2}:{h*2}:(ow-iw)/2:(oh-ih)/2,zoompan=z='{zoom}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d={frames}:s={w}x{h}:fps={output_fps},setsar=1"
+                vf=video_fit_filter(w*2,h*2,p['format'],p.get('clipFit','fit'))+f",zoompan=z='{zoom}':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d={frames}:s={w}x{h}:fps={output_fps},setsar=1"
                 run(['ffmpeg','-y','-v','error','-i',clip['path'],'-an','-vf',vf,'-frames:v',str(frames),'-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-threads','4',str(staged)])
             else:
                 seek=['-ss',format(float(clip.get('startSeconds',0)),'.6f')] if clip.get('startSeconds',0)>0 else []
@@ -520,10 +530,10 @@ def render(job):
                     stream=next(s for s in probe(clip['path'])['streams'] if s['codec_type']=='video')
                     enhanced,result=ai_upscaler.upscale(clip['path'],tmp/f'ai-{i:03}',(w,h),stream,
                         seek=clip.get('startSeconds',0),seconds=base_frames/30 if base_frames else None,
-                        model=p.get('aiUpscaleModel','fast'),progress=lambda message:update(jid,payload={'progress':f'Clip {i+1} · {message}'}),stop=STOP)
+                        model=p.get('aiUpscaleModel','fast'),progress=lambda message:update(jid,payload={'progress':f'Clip {i+1} · {message}'}),stop=STOP,clip_fit=p.get('clipFit','fit'))
                     ai_results.append(dict(clip=i+1,**result))
                 if enhanced:shutil.copyfile(enhanced,staged)
-                else:run(['ffmpeg','-y','-v','error',*seek,'-i',clip['path'],*limit,'-an','-vf',f'scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,setpts=PTS-STARTPTS,fps=30','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-threads','4',str(staged)])
+                else:run(['ffmpeg','-y','-v','error',*seek,'-i',clip['path'],*limit,'-an','-vf',video_fit_filter(w,h,p['format'],p.get('clipFit','fit'))+',setpts=PTS-STARTPTS,fps=30','-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-threads','4',str(staged)])
             staged.replace(part)
         elif p.get('aiUpscale') and clip.get('kind')!='still':
             manifest=tmp/f'ai-{i:03}'/'complete.json'
